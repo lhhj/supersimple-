@@ -4,6 +4,7 @@ metadata:
   name: {{ include "helloworld.fullname" . }}
   labels:
     {{- include "helloworld.labels" . | nindent 4 }}
+    {{- include "hpe-ezua.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -13,6 +14,7 @@ spec:
     metadata:
       labels:
         {{- include "helloworld.selectorLabels" . | nindent 8 }}
+        {{- include "hpe-ezua.labels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:

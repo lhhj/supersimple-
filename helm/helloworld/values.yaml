@@ -60,3 +60,21 @@ autoscaling:
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+# ─────────────────────────────────────────────────────────────────
+# HPE PCAI / AI Essentials platform options
+# ${DOMAIN_NAME}, ${NAMESPACE}, ${RELEASE_NAME} are substituted
+# automatically by PCAI at deploy time.
+# ─────────────────────────────────────────────────────────────────
+ezua:
+  # Application endpoint exposed via Istio VirtualService
+  virtualService:
+    endpoint: "${RELEASE_NAME}-${NAMESPACE}.${DOMAIN_NAME}"
+    istioGateway: "istio-system/ezaf-gateway"
+
+  # SSO / Istio AuthorizationPolicy
+  authorizationPolicy:
+    namespace: "istio-system"
+    providerName: "oauth2-proxy"
+    matchLabels:
+      istio: "ingressgateway"
