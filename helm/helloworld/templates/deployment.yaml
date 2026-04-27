@@ -24,6 +24,9 @@ spec:
         - name: {{ .Chart.Name }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: LLM_ENDPOINT
+              value: {{ .Values.llmEndpoint | quote }}
           ports:
             - name: http
               containerPort: 80

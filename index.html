@@ -205,10 +205,10 @@
 
 <div class="config-bar">
   <label>Endpoint</label>
-  <input id="inp-endpoint" type="text" placeholder="https://your-llm.pcai.danofficeit.com/v1" />
+  <input id="inp-endpoint" type="text" placeholder="Leave blank to use built-in proxy (/llm)" value="/llm" />
 
   <label>API Key</label>
-  <input id="inp-apikey" type="password" placeholder="Bearer token / key" />
+  <input id="inp-apikey" type="password" placeholder="Bearer token / key (if required)" />
 
   <label>Model</label>
   <input id="inp-model" type="text" placeholder="e.g. llama3" value="llama3" />
@@ -221,8 +221,9 @@
     <div class="msg bot">
       <div class="avatar">🤖</div>
       <div class="bubble">Hi! I'm ready to test your LLM deployment on PCAI.<br><br>
-Set the <strong>Endpoint</strong> and <strong>Model</strong> in the bar above, then send a message below.<br>
-I'll call the OpenAI-compatible <code>/chat/completions</code> API directly from your browser.</div>
+The <strong>Endpoint</strong> is pre-set to <code>/llm</code> — this routes through the built-in nginx proxy to avoid CORS issues.<br>
+Set your <strong>Model</strong> name and optionally an <strong>API Key</strong>, then send a message.<br><br>
+To use a different LLM, change the Endpoint to its full URL.</div>
     </div>
   </div>
 
@@ -323,10 +324,13 @@ I'll call the OpenAI-compatible <code>/chat/completions</code> API directly from
     } catch (err) {
       removeTyping();
       addMsg('bot',
-        `❌ Network error: ${err.message}\n\nCheck that:\n` +
-        `• The endpoint URL is correct\n` +
-        `• CORS is allowed from this origin\n` +
-        `• The LLM service is running on PCAI`, 'error');
+        `❌ Network error: ${err.message}\n\n` +
+        `If using /llm (proxy), check:\n` +
+        `• LLM_ENDPOINT env var is set correctly in your Helm values (llmEndpoint)\n` +
+        `• The LLM service is reachable from inside the cluster\n\n` +
+        `If using a full URL directly, check:\n` +
+        `• CORS is allowed on the LLM server\n` +
+        `• The URL is correct and the service is running`, 'error');
       history.pop();
     }
 

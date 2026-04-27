@@ -8,6 +8,11 @@ image:
   pullPolicy: Always
   tag: "latest"
 
+# LLM reverse proxy — set this to your PCAI LLM base URL (OpenAI-compatible).
+# The nginx container proxies /llm/ → llmEndpoint/ to avoid browser CORS issues.
+# Example: "https://my-llm.pcai.danofficeit.com/v1"
+llmEndpoint: "http://your-llm-service.your-namespace.svc.cluster.local/v1"
+
 imagePullSecrets: []
 
 nameOverride: ""
