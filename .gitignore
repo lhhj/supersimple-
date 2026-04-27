@@ -1,0 +1,5 @@
+.git/
+*.log
+*.tgz
+*.tar.gz
+charts/

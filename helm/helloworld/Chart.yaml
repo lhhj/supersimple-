@@ -1,0 +1,13 @@
+apiVersion: v2
+name: helloworld
+description: A super simple Hello World app deployed on HPE PCAI
+type: application
+version: 0.1.0
+appVersion: "latest"
+keywords:
+  - helloworld
+  - pcai
+  - nginx
+maintainers:
+  - name: Your Name
+    email: your@email.com

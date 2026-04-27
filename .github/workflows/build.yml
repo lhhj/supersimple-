@@ -1,0 +1,130 @@
+name: Build, Push Docker Image & Package Helm Chart
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches:
+      - main
+
+env:
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/helloworld
+
+jobs:
+  # ─────────────────────────────────────────────
+  # 1. Build & Push Docker Image to Docker Hub
+  # ─────────────────────────────────────────────
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract Docker metadata (tags & labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─────────────────────────────────────────────
+  # 2. Package Helm Chart and upload as artifact
+  # ─────────────────────────────────────────────
+  package-helm:
+    name: Package Helm Chart (.tgz)
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'latest'
+
+      - name: Set chart version from tag or commit
+        id: chart_version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="0.1.0-${GITHUB_SHA::7}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Chart version: $VERSION"
+
+      - name: Update chart appVersion with Docker image tag
+        run: |
+          IMAGE_TAG="${{ needs.build-and-push.outputs.image_tag }}"
+          sed -i "s/^appVersion:.*/appVersion: \"${IMAGE_TAG}\"/" helm/helloworld/Chart.yaml
+          sed -i "s/^version:.*/version: ${{ steps.chart_version.outputs.version }}/" helm/helloworld/Chart.yaml
+          echo "--- Updated Chart.yaml ---"
+          cat helm/helloworld/Chart.yaml
+
+      - name: Update values.yaml with Docker Hub image
+        run: |
+          sed -i "s|repository:.*|repository: ${{ secrets.DOCKERHUB_USERNAME }}/helloworld|" helm/helloworld/values.yaml
+          sed -i "s|tag:.*|tag: \"${{ needs.build-and-push.outputs.image_tag }}\"|" helm/helloworld/values.yaml
+          echo "--- Updated values.yaml ---"
+          cat helm/helloworld/values.yaml
+
+      - name: Lint Helm chart
+        run: helm lint helm/helloworld
+
+      - name: Package Helm chart into .tgz
+        run: |
+          mkdir -p dist
+          helm package helm/helloworld --destination dist/
+          ls -lh dist/
+
+      - name: Upload Helm .tgz as GitHub Actions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: helm-chart-tgz
+          path: dist/*.tgz
+          retention-days: 30
+
+      - name: Upload Helm chart to GitHub Release (on tag push)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.tgz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
