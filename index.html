@@ -1,59 +1,339 @@
 <!DOCTYPE html>
 <html lang="en">
+<!--
+  SuperSimple · v1.1.0
+  HPE PCAI Hello World + LLM Chat Test Console
+  https://github.com/lhhj/supersimple-
+-->
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Hello World - PCAI</title>
+  <title>SuperSimple · v1.1.0</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0d1117;
+      --surface: #161b22;
+      --border:  #30363d;
+      --accent:  #00d4ff;
+      --accent2: #7c3aed;
+      --text:    #e6edf3;
+      --muted:   #8b949e;
+      --user-bg: #1f3a5f;
+      --bot-bg:  #1c2128;
+      --error:   #f85149;
+    }
+
     body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
-      justify-content: center;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
       align-items: center;
-      min-height: 100vh;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-      font-family: 'Segoe UI', Arial, sans-serif;
-      color: #e0e0e0;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
     }
-    .card {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(0,212,255,0.3);
-      border-radius: 16px;
-      padding: 3rem 4rem;
-      text-align: center;
-      box-shadow: 0 0 40px rgba(0,212,255,0.15);
-    }
-    h1 {
-      font-size: 3.5rem;
-      color: #00d4ff;
-      text-shadow: 0 0 20px rgba(0,212,255,0.6);
-      margin-bottom: 1rem;
-    }
-    p {
-      font-size: 1.2rem;
-      color: #a0c4d8;
-      margin-top: 0.5rem;
-    }
-    .badge {
-      display: inline-block;
-      margin-top: 1.5rem;
-      padding: 0.4rem 1rem;
-      background: rgba(0,212,255,0.15);
-      border: 1px solid #00d4ff;
+    .brand { display: flex; align-items: center; gap: 0.75rem; }
+    .brand h1 { font-size: 1.3rem; color: var(--accent); letter-spacing: 1px; }
+    .version {
+      font-size: 0.72rem;
+      font-weight: 700;
+      background: var(--accent2);
+      color: #fff;
+      padding: 0.2rem 0.6rem;
       border-radius: 999px;
-      font-size: 0.85rem;
-      color: #00d4ff;
       letter-spacing: 1px;
     }
+    .status-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #3fb950;
+      box-shadow: 0 0 6px #3fb950;
+      display: inline-block;
+    }
+
+    /* ── Config bar ── */
+    .config-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.6rem 2rem;
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .config-bar label { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+    .config-bar input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 0.35rem 0.6rem;
+      font-size: 0.82rem;
+      outline: none;
+    }
+    .config-bar input:focus { border-color: var(--accent); }
+    #inp-endpoint { width: 340px; }
+    #inp-apikey   { width: 180px; }
+    #inp-model    { width: 160px; }
+    .config-bar button {
+      background: var(--accent2);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 0.35rem 0.9rem;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+    .config-bar button:hover { opacity: 0.85; }
+
+    /* ── Chat area ── */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 860px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 0;
+      gap: 1rem;
+    }
+
+    #chat-log {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      min-height: 300px;
+      max-height: calc(100vh - 310px);
+      padding-right: 0.25rem;
+    }
+
+    .msg { display: flex; gap: 0.75rem; align-items: flex-start; animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; } }
+
+    .avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem;
+    }
+    .msg.user .avatar { background: var(--user-bg); }
+    .msg.bot  .avatar { background: var(--bot-bg); border: 1px solid var(--border); }
+
+    .bubble {
+      background: var(--bot-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.65rem 0.9rem;
+      font-size: 0.92rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-width: 100%;
+    }
+    .msg.user .bubble { background: var(--user-bg); border-color: #1f3a5f; }
+    .bubble.error { border-color: var(--error); color: var(--error); }
+
+    .typing span {
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      animation: blink 1.2s infinite;
+      margin: 0 1px;
+    }
+    .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
+
+    /* ── Input row ── */
+    .input-row { display: flex; gap: 0.5rem; padding: 1rem 0 1.5rem; }
+    #inp-msg {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 0.7rem 1rem;
+      font-size: 0.95rem;
+      resize: none;
+      outline: none;
+      font-family: inherit;
+    }
+    #inp-msg:focus { border-color: var(--accent); }
+    #btn-send {
+      background: linear-gradient(135deg, var(--accent2), #2563eb);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 0 1.25rem;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    #btn-send:hover    { opacity: 0.85; }
+    #btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    footer { text-align: center; font-size: 0.72rem; color: var(--muted); padding-bottom: 0.5rem; }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>🚀 Hello World!</h1>
-    <p>Deployed on <strong>HPE Private Cloud AI (PCAI)</strong></p>
-    <p>Running in Kubernetes &mdash; built with GitHub Actions &amp; Docker Hub</p>
-    <div class="badge">SUPERSIMPLE · v1.0.0</div>
+
+<header>
+  <div class="brand">
+    <span class="status-dot"></span>
+    <h1>🚀 SuperSimple</h1>
+    <span class="version">v1.1.0</span>
   </div>
+  <div style="font-size:0.8rem; color:var(--muted);">HPE Private Cloud AI · LLM Test Console</div>
+</header>
+
+<div class="config-bar">
+  <label>Endpoint</label>
+  <input id="inp-endpoint" type="text" placeholder="https://your-llm.pcai.danofficeit.com/v1" />
+
+  <label>API Key</label>
+  <input id="inp-apikey" type="password" placeholder="Bearer token / key" />
+
+  <label>Model</label>
+  <input id="inp-model" type="text" placeholder="e.g. llama3" value="llama3" />
+
+  <button onclick="clearChat()">🗑 Clear</button>
+</div>
+
+<main>
+  <div id="chat-log">
+    <div class="msg bot">
+      <div class="avatar">🤖</div>
+      <div class="bubble">Hi! I'm ready to test your LLM deployment on PCAI.<br><br>
+Set the <strong>Endpoint</strong> and <strong>Model</strong> in the bar above, then send a message below.<br>
+I'll call the OpenAI-compatible <code>/chat/completions</code> API directly from your browser.</div>
+    </div>
+  </div>
+
+  <div class="input-row">
+    <textarea id="inp-msg" rows="2" placeholder="Type a message and press Enter…"></textarea>
+    <button id="btn-send" onclick="sendMessage()">➤</button>
+  </div>
+</main>
+
+<footer>SuperSimple v1.1.0 · lhhj/supersimple- · Built by GitHub Actions &amp; Docker Hub</footer>
+
+<script>
+  const log     = document.getElementById('chat-log');
+  const msgBox  = document.getElementById('inp-msg');
+  const sendBtn = document.getElementById('btn-send');
+  const history = [];
+
+  msgBox.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function addMsg(role, text, extra = '') {
+    const div = document.createElement('div');
+    div.className = `msg ${role}`;
+    div.innerHTML = `
+      <div class="avatar">${role === 'user' ? '🧑' : '🤖'}</div>
+      <div class="bubble ${extra}">${escHtml(text)}</div>`;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+    return div;
+  }
+
+  function addTyping() {
+    const div = document.createElement('div');
+    div.className = 'msg bot';
+    div.id = 'typing-indicator';
+    div.innerHTML = `<div class="avatar">🤖</div>
+      <div class="bubble"><span class="typing"><span></span><span></span><span></span></span></div>`;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function removeTyping() {
+    const t = document.getElementById('typing-indicator');
+    if (t) t.remove();
+  }
+
+  function clearChat() {
+    history.length = 0;
+    log.innerHTML = '';
+    addMsg('bot', 'Chat cleared. Ready for a new test!');
+  }
+
+  async function sendMessage() {
+    const text     = msgBox.value.trim();
+    const endpoint = document.getElementById('inp-endpoint').value.trim().replace(/\/$/, '');
+    const apiKey   = document.getElementById('inp-apikey').value.trim();
+    const model    = document.getElementById('inp-model').value.trim() || 'llama3';
+
+    if (!text) return;
+    if (!endpoint) {
+      addMsg('bot', '⚠️ Please enter an Endpoint URL in the config bar above.', 'error');
+      return;
+    }
+
+    msgBox.value = '';
+    sendBtn.disabled = true;
+    addMsg('user', text);
+    history.push({ role: 'user', content: text });
+    addTyping();
+
+    const headers = { 'Content-Type': 'application/json' };
+    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+
+    try {
+      const res = await fetch(`${endpoint}/chat/completions`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ model, messages: history, stream: false })
+      });
+
+      removeTyping();
+
+      if (!res.ok) {
+        const errText = await res.text();
+        addMsg('bot', `❌ HTTP ${res.status}\n\n${errText}`, 'error');
+        history.pop();
+      } else {
+        const data  = await res.json();
+        const reply = data.choices?.[0]?.message?.content ?? JSON.stringify(data, null, 2);
+        history.push({ role: 'assistant', content: reply });
+        addMsg('bot', reply);
+      }
+    } catch (err) {
+      removeTyping();
+      addMsg('bot',
+        `❌ Network error: ${err.message}\n\nCheck that:\n` +
+        `• The endpoint URL is correct\n` +
+        `• CORS is allowed from this origin\n` +
+        `• The LLM service is running on PCAI`, 'error');
+      history.pop();
+    }
+
+    sendBtn.disabled = false;
+    msgBox.focus();
+  }
+</script>
 </body>
 </html>
+
